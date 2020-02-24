@@ -18,10 +18,14 @@ import numpy as np
 from yt.utilities.physical_constants import \
     charge_proton_cgs, \
     mass_electron_cgs, \
-    speed_of_light_cgs
+    speed_of_light_cgs, \
+    planck_constant_cgs, \
+    boltzmann_constant_cgs
 from yt.utilities.on_demand_imports import _scipy, NotAModule
+from yt.units.yt_array import YTArray, YTQuantity
 
 special = _scipy.special
+signal = _scipy.signal
 tau_factor = None
 _cs = None
 
@@ -159,7 +163,7 @@ def tau_profile(lambda_0, f_value, gamma, v_doppler, column_density,
     f_value : float
        absorption line f-value.
     gamma : float
-       absorption line gamma value.
+       absorption line gamma value, for 21 cm it represents the A_10 value.
     v_doppler : float in cm/s
        doppler b-parameter.
     column_density : float in cm^-2
@@ -182,12 +186,18 @@ def tau_profile(lambda_0, f_value, gamma, v_doppler, column_density,
         Default: 0.01.
 
     """
+    #import pdb, pdb.set_trace()
     global tau_factor
     if tau_factor is None:
-        tau_factor = (
-            np.sqrt(np.pi) * charge_proton_cgs ** 2 /
-            (mass_electron_cgs * speed_of_light_cgs)
-        ).in_cgs().d
+        if (lambda_0 == 2.1e9):
+            tau_factor = (0.029842 * planck_constant_cgs * gamma *
+                    speed_of_light_cgs * lambda_0**2 / boltzmann_constant_cgs
+                    ).in_cgs().d
+        else: 
+            tau_factor = (
+                np.sqrt(np.pi) * charge_proton_cgs ** 2 /
+                (mass_electron_cgs * speed_of_light_cgs)
+            ).in_cgs().d
 
     global _cs
     if _cs is None:
@@ -210,15 +220,21 @@ def tau_profile(lambda_0, f_value, gamma, v_doppler, column_density,
             np.arange(n_lambda, dtype=np.float) * dlambda - \
             n_lambda * dlambda / 2  # wavelength vector (angstroms)
 
-    # tau_0
-    tau_X = tau_factor * column_density * f_value / v_doppler
-    tau0 = tau_X * lambda_0 * 1e-8
-
-    # dimensionless frequency offset in units of doppler freq
-    x = _cs / v_doppler * (lam1 / lambda_bins - 1.0)
-    a = gamma / (4.0 * np.pi * nudop)               # damping parameter
-    phi = voigt(a, x)                               # line profile
-    tauphi = tau0 * phi              # profile scaled with tau0
+    if (lambda_0 == 2.1e9):
+        # tau_0
+        tau0 = tau_factor * column_density * v_doppler
+        phi = signal.unit_impulse(len(lambda_bins),np.digitize(lam1,lambda_bins))
+        tauphi = tau0 * phi              # profile scaled with tau0
+    else:
+        # tau_0
+        tau_X = tau_factor * column_density * f_value / v_doppler
+        tau0 = tau_X * lambda_0 * 1e-8
+        
+        # dimensionless frequency offset in units of doppler freq
+        x = _cs / v_doppler * (lam1 / lambda_bins - 1.0)
+        a = gamma / (4.0 * np.pi * nudop)               # damping parameter
+        phi = voigt(a, x)                               # line profile
+        tauphi = tau0 * phi              # profile scaled with tau0
 
     return (lambda_bins, tauphi)
 

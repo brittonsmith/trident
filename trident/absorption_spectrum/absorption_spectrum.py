@@ -35,6 +35,7 @@ from yt.utilities.physical_constants import \
 
 from trident.absorption_spectrum.absorption_line import \
     tau_profile
+from yt.utilities.cosmology import Cosmology
 
 pyfits = _astropy.pyfits
 
@@ -468,6 +469,10 @@ class AbsorptionSpectrum(object):
         input_ds.domain_left_edge = input_ds.domain_left_edge.to('code_length')
         input_ds.domain_right_edge = input_ds.domain_right_edge.to('code_length')
 
+        self.h0 = getattr(input_ds,'hubble_constant')
+        self.omega_matter = getattr(input_ds,'omega_matter')
+        self.omega_lambda = getattr(input_ds,'omega_lambda')
+
         if self.bin_space == 'velocity':
             self.zero_redshift = getattr(input_ds, 'current_redshift', 0)
 
@@ -706,7 +711,11 @@ class AbsorptionSpectrum(object):
         # and deposit the lines into the spectrum
         for store, line in parallel_objects(self.line_list, njobs=njobs,
                                             storage=self.line_observables_dict):
-            column_density = field_data[line['field_name']] * field_data['dl']
+            #import pdb; pdb.set_trace()
+            if (line['wavelength'].d == 2.1e9):
+                column_density = field_data[line['field_name']] 
+            else:    
+                column_density = field_data[line['field_name']] * field_data['dl']
             if (column_density < 0).any():
                 mylog.warning(
                     "Setting negative densities for field %s to 0! Bad!" % line['field_name'])
@@ -739,18 +748,31 @@ class AbsorptionSpectrum(object):
             # the total number of absorbers per transition
             n_absorbers = len(lambda_obs)
 
-            # thermal broadening b parameter
-            thermal_b =  np.sqrt((2 * boltzmann_constant_cgs *
-                                  field_data['temperature']) /
-                                  line['atomic_mass'])
-
+            # thermal broadening b parameter, for 21 cm setting this to bin_width since each absorber only contributes to the central pixel. Line profile is a delta. 
+            if (line['wavelength'].d == 2.1e9):
+                #thermal_b = np.ones(redshift.size) * YTQuantity(self.bin_width.d,'cm/s')
+                thermal_b =  np.sqrt((2 * boltzmann_constant_cgs *
+                                      field_data['temperature']) /
+                                      line['atomic_mass'])
+                inv_temp = 1. / field_data['temperature'].d
+            # the actual thermal width of the lines
+            else:    
+                thermal_b =  np.sqrt((2 * boltzmann_constant_cgs *
+                                      field_data['temperature']) /
+                                      line['atomic_mass'])
             # the actual thermal width of the lines
             thermal_width = (lambda_obs * thermal_b /
                              c_kms).to('angstrom')
 
+
+            co = Cosmology(self.h0,self.omega_matter,self.omega_lambda,0.0)
+            h_now = co.hubble_parameter(np.max(redshift)) #hubble constant at z
             # Sanitize units for faster runtime of the tau_profile machinery.
             lambda_0 = line['wavelength'].d  # line's rest frame; angstroms
-            cdens = column_density.in_units("cm**-2").d # cm**-2
+            if (line['wavelength'].d == 2.1e9):
+                cdens = column_density.in_units("cm**-3").d / h_now.d 
+            else:
+                cdens = column_density.in_units("cm**-2").d # cm**-2
             thermb = thermal_b.to('cm/s').d  # thermal b coefficient; cm / s
             dlambda = delta_lambda.d  # lambda offset; angstroms
             # Array to store sum of the tau values for each index in the
@@ -786,8 +808,11 @@ class AbsorptionSpectrum(object):
                 raise RuntimeError('What bin space is this?')
 
             resolution = my_width / self.bin_width
-            n_vbins_per_bin = (10 ** (np.ceil( np.log10( subgrid_resolution /
-                               resolution) ).clip(0, np.inf) ) ).astype('int')
+            #if (line['wavelength'] == 2.1e9):
+            #    n_vbins_per_bin = np.ones(len(redshift),dtype=int) 
+            #else:
+            n_vbins_per_bin = (10 ** (np.ceil( np.log10(subgrid_resolution/
+                               resolution)).clip(0, np.inf))).astype('int')
             vbin_width = self.bin_width.d / n_vbins_per_bin
 
             # a note to the user about which lines components are unresolved
@@ -882,11 +907,18 @@ class AbsorptionSpectrum(object):
                              'increasing the bin size.') % my_vbins.size)
 
                     # the virtual bins and their corresponding opacities
-                    my_vbins, vtau = \
-                        tau_profile(
-                            lambda_0, line['f_value'], line['gamma'],
-                            thermb[i], cdens[i],
-                            delta_lambda=dlambda[i], lambda_bins=my_vbins)
+                    if (line['wavelength'].d == 2.1e9): 
+                        my_vbins, vtau = \
+                            tau_profile(
+                                lambda_0, line['f_value'], line['gamma'],
+                                inv_temp[i], cdens[i],
+                                delta_lambda=dlambda[i], lambda_bins=my_vbins)
+                    else:
+                        my_vbins, vtau = \
+                            tau_profile(
+                                lambda_0, line['f_value'], line['gamma'],
+                                thermb[i], cdens[i],
+                                delta_lambda=dlambda[i], lambda_bins=my_vbins)
 
                     # If tau has not dropped below min tau threshold by the
                     # edges (ie the wings), then widen the wavelength
