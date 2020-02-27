@@ -748,21 +748,21 @@ class AbsorptionSpectrum(object):
             # the total number of absorbers per transition
             n_absorbers = len(lambda_obs)
 
-            # thermal broadening b parameter, for 21 cm setting this to bin_width since each absorber only contributes to the central pixel. Line profile is a delta. 
-            if (line['wavelength'].d == 2.1e9):
-                #thermal_b = np.ones(redshift.size) * YTQuantity(self.bin_width.d,'cm/s')
+            # thermal broadening b parameter
+            inv_temp = 1. / field_data['temperature'].d
+
+            if line['wavelength'] == 2.1e9:
+                thermal_b = np.ones(len(redshift)) * YTQuantity(self.bin_width.d,'km/s')
+                # the actual thermal width of the lines
+                thermal_width = (lambda_obs * thermal_b /
+                                 c_kms).to('angstrom')
+            else:
                 thermal_b =  np.sqrt((2 * boltzmann_constant_cgs *
-                                      field_data['temperature']) /
-                                      line['atomic_mass'])
-                inv_temp = 1. / field_data['temperature'].d
-            # the actual thermal width of the lines
-            else:    
-                thermal_b =  np.sqrt((2 * boltzmann_constant_cgs *
-                                      field_data['temperature']) /
-                                      line['atomic_mass'])
-            # the actual thermal width of the lines
-            thermal_width = (lambda_obs * thermal_b /
-                             c_kms).to('angstrom')
+                                          field_data['temperature']) /
+                                          line['atomic_mass'])
+                # the actual thermal width of the lines
+                thermal_width = (lambda_obs * thermal_b /
+                                 c_kms).to('angstrom')
 
 
             co = Cosmology(self.h0,self.omega_matter,self.omega_lambda,0.0)
@@ -808,13 +808,9 @@ class AbsorptionSpectrum(object):
                 raise RuntimeError('What bin space is this?')
 
             resolution = my_width / self.bin_width
-            #if (line['wavelength'] == 2.1e9):
-            #    n_vbins_per_bin = np.ones(len(redshift),dtype=int) 
-            #else:
             n_vbins_per_bin = (10 ** (np.ceil( np.log10(subgrid_resolution/
                                resolution)).clip(0, np.inf))).astype('int')
             vbin_width = self.bin_width.d / n_vbins_per_bin
-
             # a note to the user about which lines components are unresolved
             if (my_width < self.bin_width).any():
                 mylog.info("%d out of %d line components will be " +
@@ -897,6 +893,7 @@ class AbsorptionSpectrum(object):
                         my_vbins = vbins * \
                           wavelength_zero_point.d / c_kms.d + \
                           wavelength_zero_point.d
+
                     else:
                         raise RuntimeError('What bin_space is this?')
 

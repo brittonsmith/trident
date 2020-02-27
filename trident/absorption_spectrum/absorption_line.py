@@ -163,7 +163,7 @@ def tau_profile(lambda_0, f_value, gamma, v_doppler, column_density,
     f_value : float
        absorption line f-value.
     gamma : float
-       absorption line gamma value, for 21 cm it represents the A_10 value.
+       absorption line gamma value
     v_doppler : float in cm/s
        doppler b-parameter.
     column_density : float in cm^-2
@@ -190,8 +190,10 @@ def tau_profile(lambda_0, f_value, gamma, v_doppler, column_density,
     global tau_factor
     if tau_factor is None:
         if (lambda_0 == 2.1e9):
-            tau_factor = (0.029842 * planck_constant_cgs * gamma *
-                    speed_of_light_cgs * lambda_0**2 / boltzmann_constant_cgs
+            lam0 = YTQuantity(lambda_0,'angstrom')
+            gam = YTQuantity(gamma,'1/s')
+            tau_factor = (0.029842 * planck_constant_cgs * gam *
+                    speed_of_light_cgs * lam0**2 / boltzmann_constant_cgs
                     ).in_cgs().d
         else: 
             tau_factor = (
@@ -223,7 +225,7 @@ def tau_profile(lambda_0, f_value, gamma, v_doppler, column_density,
     if (lambda_0 == 2.1e9):
         # tau_0
         tau0 = tau_factor * column_density * v_doppler
-        phi = signal.unit_impulse(len(lambda_bins),np.digitize(lam1,lambda_bins))
+        phi = np.ones(len(lambda_bins))
         tauphi = tau0 * phi              # profile scaled with tau0
     else:
         # tau_0
