@@ -225,7 +225,7 @@ def tau_profile(lambda_0, f_value, gamma, v_doppler, column_density,
     if (lambda_0 == 2.1e9):
         # tau_0
         tau0 = tau_factor * column_density * v_doppler
-        phi = np.ones(len(lambda_bins))
+        phi =  signal.unit_impulse(lambda_bins.size,np.digitize(lam1,lambda_bins,right=True))
         tauphi = tau0 * phi              # profile scaled with tau0
     else:
         # tau_0

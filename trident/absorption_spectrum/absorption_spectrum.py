@@ -711,7 +711,6 @@ class AbsorptionSpectrum(object):
         # and deposit the lines into the spectrum
         for store, line in parallel_objects(self.line_list, njobs=njobs,
                                             storage=self.line_observables_dict):
-            #import pdb; pdb.set_trace()
             if (line['wavelength'].d == 2.1e9):
                 column_density = field_data[line['field_name']] 
             else:    
@@ -751,18 +750,13 @@ class AbsorptionSpectrum(object):
             # thermal broadening b parameter
             inv_temp = 1. / field_data['temperature'].d
 
-            if line['wavelength'] == 2.1e9:
-                thermal_b = np.ones(len(redshift)) * YTQuantity(self.bin_width.d,'km/s')
-                # the actual thermal width of the lines
-                thermal_width = (lambda_obs * thermal_b /
-                                 c_kms).to('angstrom')
-            else:
-                thermal_b =  np.sqrt((2 * boltzmann_constant_cgs *
-                                          field_data['temperature']) /
-                                          line['atomic_mass'])
-                # the actual thermal width of the lines
-                thermal_width = (lambda_obs * thermal_b /
-                                 c_kms).to('angstrom')
+            # the actual thermal width of the lines
+            thermal_b =  np.sqrt((2 * boltzmann_constant_cgs *
+                                      field_data['temperature']) /
+                                      line['atomic_mass'])
+            # the actual thermal width of the lines
+            thermal_width = (lambda_obs * thermal_b /
+                             c_kms).to('angstrom')
 
 
             co = Cosmology(self.h0,self.omega_matter,self.omega_lambda,0.0)
@@ -954,7 +948,10 @@ class AbsorptionSpectrum(object):
                 # normal use of the word by observers.  It is an equivalent
                 # with in tau, not in flux, and is only used internally in
                 # this subgrid deposition as EW_tau.
-                vEW_tau = vtau * vbin_width[i]
+                if lambda_0 == 2.1e9:
+                    vEW_tau = vtau
+                else: 
+                    vEW_tau = vtau * vbin_width[i]
                 EW_tau = np.zeros(right_index - left_index)
                 EW_tau_indices = np.arange(left_index, right_index)
                 for k, val in enumerate(EW_tau_indices):
