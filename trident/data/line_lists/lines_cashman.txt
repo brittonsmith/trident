@@ -1,3 +1,10 @@
+# Line data from Francie Cashman.
+# The primary sources for this data are:
+# Cashman et al. (2017) - https://ui.adsabs.harvard.edu/abs/2017ApJS..230....8C
+# Cashman et al. (2024) - https://ui.adsabs.harvard.edu/abs/2024ApJ...974...33C
+# Boisse & Bergeron (2019) - https://ui.adsabs.harvard.edu/abs/2019A%26A...622A.140B
+# Morton (2003) - https://ui.adsabs.harvard.edu/abs/2003ApJS..149..205M
+#
 #Ion        Wavelength [A]           gamma         f_value       alt. name
 H I            1215.670000    4.690000E+08    4.160000E-01            Ly a
 H I            1025.722200    5.570000E+07    7.910000E-02            Ly b
@@ -502,7 +509,10 @@ Ni I           2985.000000    1.080000E+08    3.510000E-03
 Ni II          1751.910000    3.700000E+08    3.610000E-02       
 Ni II          1741.553000    5.000000E+08    4.880000E-02       
 Ni II          1709.604000    4.350000E+08    5.510000E-02       
-Ni II          1703.412000    5.000000E+08    7.260000E-03       
+Ni II          1703.412000    5.000000E+08    7.260000E-03
+Ni II          1454.842000    1.020000E+08    2.200000e-02
+Ni II          1370.132000    4.100000E+08    6.160000e-02
+Ni II          1317.217000    4.205000E+08    5.960000e-02
 Cu I           3274.901000    1.380000E+08    2.210000E-01       
 Cu I           3248.477000    1.390000E+08    4.410000E-01       
 Cu II          1472.395000    3.600000E+08    2.170000E-02       
